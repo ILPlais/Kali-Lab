@@ -1,0 +1,94 @@
+- name: Provision-Kali
+  hosts: all
+  become: true
+
+  handlers:
+    - name: update initramfs
+      command: update-initramfs -u
+
+  tasks:
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+
+    ###########################################################################
+
+    - name: Install Kali's metapackage
+      ansible.builtin.apt:
+        name:
+          - kali-linux-large
+        state: present
+        update_cache: true
+
+    ###########################################################################
+
+    - name: Install French locales
+      apt:
+        pkg:
+          - locales
+          - locales-all
+
+    - name: Ensure the locale exists
+      community.general.locale_gen:
+        name: fr_FR.UTF-8
+        state: present
+
+    - name: Set default system locale to French
+      command: update-locale LANG=fr_FR.UTF-8 LANGUAGE=fr_FR:fr LC_ALL=fr_FR.UTF-8
+
+    - name: Set timezone to Europe/Paris
+      community.general.timezone:
+        name: Europe/Paris
+
+    - name: Configure keyboard layout (BÉPO fr)
+      ansible.builtin.copy:
+        dest: /etc/default/keyboard
+        content: |
+          XKBMODEL="pc105"
+          XKBLAYOUT="fr"
+          XKBVARIANT="bepo_afnor"
+          XKBOPTIONS=""
+          BACKSPACE="guess"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: update initramfs
+
+    - name: Apply keyboard configuration
+      command: setupcon --force
+
+    ###########################################################################
+
+    - name: Install OpenVPN
+      apt:
+        pkg:
+          - openvpn
+
+    - name: Configure OpenVPN
+      ansible.builtin.copy:
+        src: offsec.ovpn
+        dest: /etc/openvpn/offsec.conf
+        owner: root
+        group: root
+        mode: 0600
+
+    - name: Enable OpenVPN as daemon
+      ansible.builtin.systemd:
+        name: openvpn@offsec
+        enabled: true
+
+    ###########################################################################
+
+    # - name: Install pyenv
+    #   ansible.builtin.apt:
+    #     name:
+    #       - pyenv
+    #     state: present
+    #     update_cache: true
+
+    ###########################################################################
+
+    - name: Reboot your box
+      become: true
+      reboot:
