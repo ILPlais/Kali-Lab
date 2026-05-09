@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
 		# Run the playbook on all VMs
 		ansible.limit = "all"
 		# The playbook to run
-		ansible.playbook = "provision-kali.yaml"
+		ansible.playbook = "Ansible/provision-kali.yaml"
 	end
 
 	# VirtualBox-specific settings (other providers would use their own blocks).
