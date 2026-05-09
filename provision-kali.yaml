@@ -3,10 +3,12 @@
   become: true
 
   handlers:
+    # Rebuild the initramfs image after the keyboard configuration changes
     - name: update initramfs
       command: update-initramfs -u
 
   tasks:
+    # Refresh the APT cache and perform a full distribution upgrade
     - name: Upgrade all packages
       ansible.builtin.apt:
         update_cache: true
@@ -14,6 +16,7 @@
 
     ###########################################################################
 
+    # Install the "large" Kali metapackage, which bundles most offensive tools
     - name: Install Kali's metapackage
       ansible.builtin.apt:
         name:
@@ -23,24 +26,30 @@
 
     ###########################################################################
 
+    # Install the packages required for locale support (including French)
     - name: Install French locales
       apt:
         pkg:
           - locales
           - locales-all
 
+    # Generate the fr_FR.UTF-8 locale if it is not already available on the system
     - name: Ensure the locale exists
       community.general.locale_gen:
         name: fr_FR.UTF-8
         state: present
 
+    # Set French as the system-wide default language (LANG, LANGUAGE, LC_ALL)
     - name: Set default system locale to French
       command: update-locale LANG=fr_FR.UTF-8 LANGUAGE=fr_FR:fr LC_ALL=fr_FR.UTF-8
 
+    # Configure the machine's timezone to Europe/Paris
     - name: Set timezone to Europe/Paris
       community.general.timezone:
         name: Europe/Paris
 
+    # Write /etc/default/keyboard so the system uses the French BÉPO layout (AFNOR variant)
+    # Notify the handler to rebuild the initramfs so the layout is picked up at boot time
     - name: Configure keyboard layout (BÉPO fr)
       ansible.builtin.copy:
         dest: /etc/default/keyboard
@@ -55,16 +64,19 @@
         mode: '0644'
       notify: update initramfs
 
+    # Apply the new keyboard configuration to the console immediately
     - name: Apply keyboard configuration
       command: setupcon --force
 
     ###########################################################################
 
+    # Install the OpenVPN client, required to connect to the OffSec VPN
     - name: Install OpenVPN
       apt:
         pkg:
           - openvpn
 
+    # Drop the OffSec OpenVPN configuration file into /etc/openvpn with restrictive permissions (0600)
     - name: Configure OpenVPN
       ansible.builtin.copy:
         src: offsec.ovpn
@@ -73,22 +85,13 @@
         group: root
         mode: 0600
 
+    # Enable the openvpn@offsec systemd service so it starts automatically at boot
     - name: Enable OpenVPN as daemon
       ansible.builtin.systemd:
         name: openvpn@offsec
         enabled: true
 
-    ###########################################################################
-
-    # - name: Install pyenv
-    #   ansible.builtin.apt:
-    #     name:
-    #       - pyenv
-    #     state: present
-    #     update_cache: true
-
-    ###########################################################################
-
+    # Reboot the machine so every change (locale, keyboard, kernel, etc.) takes effect
     - name: Reboot your box
       become: true
       reboot:
