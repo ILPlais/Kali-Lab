@@ -9,16 +9,21 @@ Vagrant.configure("2") do |config|
 
 	# Provision the VM with Ansible (runs playbook on first boot and on `vagrant provision`).
 	config.vm.provision "ansible" do |ansible|
+		# Run the playbook on all VMs
 		ansible.limit = "all"
+		# The playbook to run
 		ansible.playbook = "provision-kali.yaml"
 	end
 
 	# VirtualBox-specific settings (other providers would use their own blocks).
 	config.vm.provider "virtualbox" do |vb|
+		# Name of the VM in VirtualBox
 		vb.name = "kali-lab"
+		# Show the VirtualBox GUI
 		vb.gui = true
-
-		vb.memory = 4096
+		# 8GB of memory
+		vb.memory = 8192
+		# 4 CPU cores
 		vb.cpus = 4
 	end
 end
